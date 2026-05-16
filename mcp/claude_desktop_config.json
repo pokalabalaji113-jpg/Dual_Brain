@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "dualbrain-ai": {
+      "command": "python",
+      "args": ["mcp/mcp_server.py"],
+      "cwd": "C:/Users/pokal/OneDrive/Documents/Desktop/dual_brain_ai",
+      "env": {
+        "GROQ_API_KEY": "your_groq_api_key_here"
+      }
+    }
+  }
+}
