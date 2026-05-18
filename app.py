@@ -182,6 +182,16 @@ def render_brain_selector():
     st.markdown("---")
     st.markdown('<div style="color:#999;font-size:0.82rem;">DualBrain AI — Powered by LangChain · LangGraph · Groq LLaMA 3.3 70B · FAISS · MCP</div>',
                 unsafe_allow_html=True)
+    st.markdown("""
+    <div style="margin-top:20px;padding:12px;background:#f8f8f8;border-radius:8px;
+                border:1px solid #e0e0e0;text-align:center;">
+        <div style="font-size:0.85rem;color:#555;">
+            💡 <b>Tip:</b> If the sidebar is not visible, click the 
+            <b style="background:#111;color:white;padding:2px 8px;border-radius:4px;">›</b> 
+            arrow at the top-left corner of the screen to open it.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
