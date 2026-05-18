@@ -43,6 +43,26 @@ st.markdown("""
     }
     #MainMenu, footer { visibility: hidden; }
     header { visibility: hidden; }
+
+    /* ── Sidebar always visible + toggle button fix ── */
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    section[data-testid="stSidebar"] {
+        display: flex !important;
+        visibility: visible !important;
+        min-width: 240px;
+    }
+    section[data-testid="stSidebar"] > div {
+        padding-top: 1rem;
+    }
+    /* Arrow button always shown */
+    button[kind="header"] {
+        display: flex !important;
+        visibility: visible !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
