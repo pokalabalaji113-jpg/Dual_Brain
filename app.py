@@ -1,6 +1,6 @@
 """
 DualBrain AI — Job Seeker & Employee Intelligence Platform
-Main entry point
+Fixed: Sidebar always visible, no collapse, static navigation.
 """
 
 import sys
@@ -8,7 +8,6 @@ import os
 import importlib.util
 import streamlit as st
 
-# ── Critical: add project root to path ────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
@@ -19,10 +18,34 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── CSS ────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .block-container { padding-top: 1.5rem; }
+    /* ── Hide sidebar collapse arrow completely ── */
+    [data-testid="collapsedControl"] { display: none !important; }
+    button[data-testid="baseButton-header"] { display: none !important; }
+
+    /* ── Sidebar always open and fixed ── */
+    section[data-testid="stSidebar"] {
+        width: 260px !important;
+        min-width: 260px !important;
+        max-width: 260px !important;
+        transform: none !important;
+        visibility: visible !important;
+        display: flex !important;
+    }
+    section[data-testid="stSidebar"] > div {
+        width: 260px !important;
+        padding-top: 1rem !important;
+    }
+
+    /* ── Main content ── */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    /* ── Brain cards ── */
     .brain-card {
         border: 1.5px solid #e0e0e0;
         border-radius: 10px;
@@ -33,6 +56,8 @@ st.markdown("""
     .brain-icon  { font-size: 2.4rem; margin-bottom: 8px; }
     .brain-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
     .brain-sub   { font-size: 0.82rem; color: #666; }
+
+    /* ── Section label ── */
     .section-label {
         font-size: 0.72rem;
         font-weight: 700;
@@ -41,28 +66,11 @@ st.markdown("""
         color: #999;
         margin-bottom: 4px;
     }
-    #MainMenu, footer { visibility: hidden; }
-    header { visibility: hidden; }
 
-    /* ── Sidebar always visible + toggle button fix ── */
-    [data-testid="collapsedControl"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-    section[data-testid="stSidebar"] {
-        display: flex !important;
-        visibility: visible !important;
-        min-width: 240px;
-    }
-    section[data-testid="stSidebar"] > div {
-        padding-top: 1rem;
-    }
-    /* Arrow button always shown */
-    button[kind="header"] {
-        display: flex !important;
-        visibility: visible !important;
-    }
+    /* ── Hide default streamlit elements ── */
+    #MainMenu  { visibility: hidden; }
+    footer     { visibility: hidden; }
+    header     { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -126,7 +134,7 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# ── Validate page state is always a valid key ──────────────────────────────────
+# ── Validate page state ────────────────────────────────────────────────────────
 if st.session_state.seeker_page not in SEEKER_PAGES:
     st.session_state.seeker_page = "Resume Analysis"
 if st.session_state.employee_page not in EMPLOYEE_PAGES:
@@ -162,8 +170,8 @@ def render_brain_selector():
         </div>
         """, unsafe_allow_html=True)
         if st.button("Enter Job Seeker Mode", key="btn_seeker", use_container_width=True):
-            st.session_state.brain_mode   = "seeker"
-            st.session_state.seeker_page  = "Resume Analysis"
+            st.session_state.brain_mode  = "seeker"
+            st.session_state.seeker_page = "Resume Analysis"
             st.rerun()
 
     with col2:
@@ -180,28 +188,26 @@ def render_brain_selector():
             st.rerun()
 
     st.markdown("---")
-    st.markdown('<div style="color:#999;font-size:0.82rem;">DualBrain AI — Powered by LangChain · LangGraph · Groq LLaMA 3.3 70B · FAISS · MCP</div>',
-                unsafe_allow_html=True)
-    st.markdown("""
-    <div style="margin-top:20px;padding:12px;background:#f8f8f8;border-radius:8px;
-                border:1px solid #e0e0e0;text-align:center;">
-        <div style="font-size:0.85rem;color:#555;">
-            💡 <b>Tip:</b> If the sidebar is not visible, click the 
-            <b style="background:#111;color:white;padding:2px 8px;border-radius:4px;">›</b> 
-            arrow at the top-left corner of the screen to open it.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="color:#999;font-size:0.82rem;">'
+        'DualBrain AI — Powered by LangChain · LangGraph · Groq LLaMA 3.3 70B · FAISS · MCP'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
-# ── Sidebar ────────────────────────────────────────────────────────────────────
+# ── Sidebar — always visible, no collapse ─────────────────────────────────────
 def render_sidebar():
     with st.sidebar:
         st.markdown("### 🧠 DualBrain AI")
         st.markdown("---")
 
         if st.session_state.brain_mode:
-            mode_label = "🎯 Job Seeker" if st.session_state.brain_mode == "seeker" else "💼 Employee"
+            mode_label = (
+                "🎯 Job Seeker"
+                if st.session_state.brain_mode == "seeker"
+                else "💼 Employee"
+            )
             st.markdown(f"**Active:** {mode_label}")
             if st.button("↩ Switch Brain", use_container_width=True):
                 st.session_state.brain_mode = None
@@ -209,26 +215,42 @@ def render_sidebar():
             st.markdown("---")
 
         if st.session_state.brain_mode == "seeker":
-            st.markdown('<div class="section-label">Job Seeker Tools</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="section-label">Job Seeker Tools</div>',
+                unsafe_allow_html=True,
+            )
             for page in SEEKER_PAGES:
                 active = st.session_state.seeker_page == page
-                if st.button(page, key=f"nav_{page}", use_container_width=True,
-                             type="primary" if active else "secondary"):
+                if st.button(
+                    page,
+                    key=f"nav_{page}",
+                    use_container_width=True,
+                    type="primary" if active else "secondary",
+                ):
                     st.session_state.seeker_page = page
                     st.rerun()
 
         elif st.session_state.brain_mode == "employee":
-            st.markdown('<div class="section-label">Employee Tools</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="section-label">Employee Tools</div>',
+                unsafe_allow_html=True,
+            )
             for page in EMPLOYEE_PAGES:
                 active = st.session_state.employee_page == page
-                if st.button(page, key=f"nav_{page}", use_container_width=True,
-                             type="primary" if active else "secondary"):
+                if st.button(
+                    page,
+                    key=f"nav_{page}",
+                    use_container_width=True,
+                    type="primary" if active else "secondary",
+                ):
                     st.session_state.employee_page = page
                     st.rerun()
 
         st.markdown("---")
-        st.markdown('<div style="color:#999;font-size:0.78rem;">DualBrain AI v1.0</div>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            '<div style="color:#999;font-size:0.78rem;">DualBrain AI v1.0</div>',
+            unsafe_allow_html=True,
+        )
 
 
 # ── Routing ────────────────────────────────────────────────────────────────────
