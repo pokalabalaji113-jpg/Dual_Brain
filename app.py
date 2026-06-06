@@ -1,6 +1,6 @@
 """
 DualBrain AI — Job Seeker & Employee Intelligence Platform
-Fixed: Sidebar always visible, no collapse, static navigation.
+Fixed: Sidebar proper width, readable navigation, no compression.
 """
 
 import sys
@@ -20,29 +20,41 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* ── Hide sidebar collapse arrow completely ── */
+    /* ── Hide collapse arrow ── */
     [data-testid="collapsedControl"] { display: none !important; }
-    button[data-testid="baseButton-header"] { display: none !important; }
 
-    /* ── Sidebar always open and fixed ── */
+    /* ── Sidebar fixed width, always open ── */
     section[data-testid="stSidebar"] {
-        width: 260px !important;
-        min-width: 260px !important;
-        max-width: 260px !important;
-        transform: none !important;
+        width: 220px !important;
+        min-width: 220px !important;
+        max-width: 220px !important;
+        transform: translateX(0px) !important;
         visibility: visible !important;
-        display: flex !important;
     }
-    section[data-testid="stSidebar"] > div {
-        width: 260px !important;
-        padding-top: 1rem !important;
+    section[data-testid="stSidebar"] > div:first-child {
+        width: 220px !important;
+        padding: 1rem 0.8rem !important;
+        overflow-x: hidden !important;
     }
 
-    /* ── Main content ── */
+    /* ── Sidebar buttons — full text visible ── */
+    section[data-testid="stSidebar"] button {
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        height: auto !important;
+        min-height: 38px !important;
+        font-size: 0.82rem !important;
+        padding: 6px 10px !important;
+        line-height: 1.3 !important;
+        text-align: left !important;
+    }
+
+    /* ── Main content area ── */
     .block-container {
-        padding-top: 1.5rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-top: 1.5rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+        max-width: 100% !important;
     }
 
     /* ── Brain cards ── */
@@ -57,18 +69,17 @@ st.markdown("""
     .brain-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
     .brain-sub   { font-size: 0.82rem; color: #666; }
 
-    /* ── Section label ── */
     .section-label {
-        font-size: 0.72rem;
+        font-size: 0.7rem;
         font-weight: 700;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
         color: #999;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
+        margin-top: 4px;
     }
 
-    /* ── Hide default streamlit elements ── */
-    #MainMenu  { visibility: hidden; }
+    #MainMenu { visibility: hidden; }
     footer     { visibility: hidden; }
     header     { visibility: hidden; }
 </style>
@@ -134,7 +145,6 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# ── Validate page state ────────────────────────────────────────────────────────
 if st.session_state.seeker_page not in SEEKER_PAGES:
     st.session_state.seeker_page = "Resume Analysis"
 if st.session_state.employee_page not in EMPLOYEE_PAGES:
@@ -146,7 +156,6 @@ def load_page(filename: str):
     page_path = os.path.join(BASE_DIR, "pages", f"{filename}.py")
     if not os.path.exists(page_path):
         st.error(f"❌ File not found: {page_path}")
-        st.info("Make sure all files are inside the `pages/` folder.")
         return
     spec   = importlib.util.spec_from_file_location(filename, page_path)
     module = importlib.util.module_from_spec(spec)
@@ -159,7 +168,6 @@ def render_brain_selector():
     st.markdown("## 🧠 DualBrain AI")
     st.markdown("Choose your mode to begin. The AI adapts its intelligence to your role.")
     st.markdown("---")
-
     col1, col2, _ = st.columns([1, 1, 0.2])
     with col1:
         st.markdown("""
@@ -173,7 +181,6 @@ def render_brain_selector():
             st.session_state.brain_mode  = "seeker"
             st.session_state.seeker_page = "Resume Analysis"
             st.rerun()
-
     with col2:
         st.markdown("""
         <div class="brain-card">
@@ -186,17 +193,16 @@ def render_brain_selector():
             st.session_state.brain_mode    = "employee"
             st.session_state.employee_page = "Learning Companion"
             st.rerun()
-
     st.markdown("---")
     st.markdown(
         '<div style="color:#999;font-size:0.82rem;">'
-        'DualBrain AI — Powered by LangChain · LangGraph · Groq LLaMA 3.3 70B · FAISS · MCP'
+        'DualBrain AI — LangChain · LangGraph · Groq LLaMA 3.3 70B · FAISS · MCP'
         '</div>',
         unsafe_allow_html=True,
     )
 
 
-# ── Sidebar — always visible, no collapse ─────────────────────────────────────
+# ── Sidebar ────────────────────────────────────────────────────────────────────
 def render_sidebar():
     with st.sidebar:
         st.markdown("### 🧠 DualBrain AI")
@@ -248,7 +254,7 @@ def render_sidebar():
 
         st.markdown("---")
         st.markdown(
-            '<div style="color:#999;font-size:0.78rem;">DualBrain AI v1.0</div>',
+            '<div style="color:#999;font-size:0.75rem;">DualBrain AI v1.0</div>',
             unsafe_allow_html=True,
         )
 
