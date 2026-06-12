@@ -3,7 +3,8 @@
 .streamlit/secrets.toml
 *.key
 *.pem
-
+.env.example
+.env*
 # ── Python ─────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
