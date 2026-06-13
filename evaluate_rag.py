@@ -1,9 +1,11 @@
 """
-evaluate_rag.py
-RAGAS + Langfuse v3 — uses create_score() for Scores dashboard.
-Run: python evaluate_rag.py
+evaluate_rag.py - Final, based on friend's working tracer.py pattern exactly.
+- Env var: LANGFUSE_BASE_URL (not LANGFUSE_HOST)
+- get_client() singleton
+- create_score(trace_id=..., name=..., value=..., data_type="NUMERIC")
+- flush() after every score
 """
-import os, sys, time
+import os, sys, time, uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
@@ -12,9 +14,6 @@ try:
 except Exception:
     pass
 
-if os.getenv("LANGFUSE_BASE_URL") and not os.getenv("LANGFUSE_HOST"):
-    os.environ["LANGFUSE_HOST"] = os.getenv("LANGFUSE_BASE_URL")
-
 if not os.getenv("LANGFUSE_PUBLIC_KEY"):
     try:
         with open(".streamlit/secrets.toml") as f:
@@ -22,74 +21,86 @@ if not os.getenv("LANGFUSE_PUBLIC_KEY"):
                 line = line.strip()
                 if "=" in line and not line.startswith("#"):
                     k, v = line.split("=", 1)
-                    k = k.strip()
-                    v = v.strip().strip('"').strip("'")
+                    k, v = k.strip(), v.strip().strip('"').strip("'")
                     if k and v:
                         os.environ[k] = v
     except Exception:
         pass
 
-TEST_DATA = [
-    {
-        "question":     "What is LangChain?",
-        "contexts":     ["LangChain is a framework for building applications powered by language models."],
-        "ground_truth": "LangChain builds LLM-powered applications.",
-    },
-    {
-        "question":     "What is FAISS?",
-        "contexts":     ["FAISS is a library for fast similarity search of dense vectors."],
-        "ground_truth": "FAISS is a vector similarity search library.",
-    },
-]
+# normalize host var
+if os.getenv("LANGFUSE_HOST") and not os.getenv("LANGFUSE_BASE_URL"):
+    os.environ["LANGFUSE_BASE_URL"] = os.getenv("LANGFUSE_HOST")
+if not os.getenv("LANGFUSE_BASE_URL"):
+    os.environ["LANGFUSE_BASE_URL"] = "https://us.cloud.langfuse.com"
 
+GK  = os.getenv("GROQ_API_KEY", "")
+PK  = os.getenv("LANGFUSE_PUBLIC_KEY", "")
+SK  = os.getenv("LANGFUSE_SECRET_KEY", "")
+URL = os.getenv("LANGFUSE_BASE_URL")
 
-def init_langfuse():
+print("="*60)
+print("DualBrain AI — RAGAS + Langfuse v4")
+print("="*60)
+print(f"GROQ key   : {'OK' if GK else 'MISSING'}")
+print(f"LF public  : {'OK' if PK else 'MISSING'}")
+print(f"LF secret  : {'OK' if SK else 'MISSING'}")
+print(f"LF host    : {URL}")
+
+if not GK or "your" in GK.lower():
+    print("\n❌ GROQ_API_KEY missing in .env"); sys.exit(1)
+
+from langchain_groq import ChatGroq
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+client = None
+if PK and SK and "your" not in PK.lower():
     try:
         from langfuse import Langfuse, get_client
-        pk   = os.getenv("LANGFUSE_PUBLIC_KEY", "")
-        sk   = os.getenv("LANGFUSE_SECRET_KEY", "")
-        host = os.getenv("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
-        if not pk or not sk or "your" in pk:
-            return None
-        Langfuse(public_key=pk, secret_key=sk, host=host)
+        Langfuse(public_key=PK, secret_key=SK, host=URL)
         client = get_client()
         client.auth_check()
-        print(f"   ✅ Langfuse v3 connected: {host}")
-        return client
+        print("\n✅ Langfuse v4 connected!")
     except Exception as e:
-        print(f"   ❌ Langfuse error: {e}")
-        return None
+        print(f"\n⚠️ Langfuse init failed: {e}")
+else:
+    print("\n⚠️ Langfuse keys missing — running without tracing")
+
+TEST_DATA = [
+    {"question": "What is LangChain?",
+     "contexts": ["LangChain is a framework for building applications powered by language models."],
+     "ground_truth": "LangChain builds LLM-powered applications."},
+    {"question": "What is FAISS?",
+     "contexts": ["FAISS is a library for fast similarity search of dense vectors."],
+     "ground_truth": "FAISS is a vector similarity search library."},
+]
+
+llm = ChatGroq(api_key=GK, model="llama-3.3-70b-versatile", temperature=0.0, max_tokens=80)
 
 
-def create_score_in_dashboard(lf, trace_id: str, name: str, value: float, comment: str = ""):
-    """
-    Correct v3 API: langfuse.create_score()
-    This is what makes scores appear in Scores dashboard.
-    """
+def send_score(trace_id, name, value, comment=""):
+    if not client:
+        return False
     try:
-        lf.create_score(
-            trace_id  = trace_id,
-            name      = name,
-            value     = value,
-            data_type = "NUMERIC",
-            comment   = comment,
+        client.create_score(
+            trace_id=trace_id, name=name, value=value,
+            data_type="NUMERIC", comment=comment,
         )
+        client.flush()
         return True
     except Exception as e:
-        print(f"   ⚠️ create_score error: {e}")
+        print(f"   ⚠️ score failed: {e}")
         return False
 
 
-def score_metric(llm, prompt_text, inputs) -> float:
-    from langchain_core.prompts import PromptTemplate
-    from langchain_core.output_parsers import StrOutputParser
+def score_metric(prompt_text, inputs):
     try:
         raw = (PromptTemplate.from_template(prompt_text) | llm | StrOutputParser()).invoke(inputs)
         for t in raw.strip().replace(",", ".").split():
             try:
                 v = float(t)
-                if 0.0 <= v <= 1.0:
-                    return v
+                if 0 <= v <= 1:
+                    return round(v, 4)
             except Exception:
                 continue
         return 0.75
@@ -97,194 +108,110 @@ def score_metric(llm, prompt_text, inputs) -> float:
         return 0.75
 
 
-def run():
-    print("=" * 60)
-    print("DualBrain AI — RAGAS + Langfuse v3 Scores Dashboard")
-    print("Using: langfuse.create_score() — correct v3 API")
-    print("=" * 60)
+all_results = []
 
-    gk = os.getenv("GROQ_API_KEY", "")
-    if not gk or "your" in gk:
-        print("❌ GROQ_API_KEY missing!")
-        return
+for idx, item in enumerate(TEST_DATA):
+    q, ctx, gt = item["question"], item["contexts"][0], item["ground_truth"]
+    print(f"\n{'─'*60}\nQ{idx+1}: {q}")
 
-    print("\n⚙️  Connecting to Langfuse...")
-    lf = init_langfuse()
-
-    from langchain_groq import ChatGroq
-    from langchain_core.prompts import PromptTemplate
-    from langchain_core.output_parsers import StrOutputParser
-
-    llm = ChatGroq(
-        api_key=gk,
-        model="llama-3.3-70b-versatile",
-        temperature=0.0,
-        max_tokens=80,
-    )
-
-    all_results  = []
-    all_trace_ids = []
-
-    for idx, item in enumerate(TEST_DATA):
-        q   = item["question"]
-        ctx = item["contexts"][0]
-        gt  = item["ground_truth"]
-
-        print(f"\n{'─'*60}")
-        print(f"📋 Q{idx+1}: {q}")
-
-        # ── Create trace ───────────────────────────────────────────
-        trace    = None
-        trace_id = None
-        if lf:
+    trace_id = None
+    span_cm  = None
+    span     = None
+    if client:
+        try:
+            span_cm = client.start_as_current_observation(
+                as_type="span",
+                name=f"DualBrain RAGAS Q{idx+1}",
+                input={"question": q, "context": ctx},
+                metadata={"project": "DualBrain AI", "rag_type": "Hybrid FAISS+BM25",
+                          "model": "llama-3.3-70b-versatile"},
+            )
+            span = span_cm.__enter__()
             try:
-                trace = lf.trace(
-                    name     = f"DualBrain RAGAS Q{idx+1}",
-                    input    = {"question": q, "context": ctx},
-                    metadata = {"project": "DualBrain AI",
-                                "rag_type": "Hybrid FAISS+BM25",
-                                "model": "llama-3.3-70b-versatile"},
-                    tags = ["ragas", "evaluation", "dualbrain"],
+                client.update_current_trace(
+                    name=f"DualBrain RAGAS Q{idx+1}",
+                    tags=["ragas", "evaluation", "dualbrain"],
                 )
-                trace_id = trace.id
-                print(f"   📡 Trace ID: {trace_id}")
-            except Exception as e:
-                print(f"   ⚠️ Trace error: {e}")
+            except Exception:
+                pass
+            trace_id = client.get_current_trace_id()
+            print(f"   Trace ID: {trace_id}")
+        except Exception as e:
+            print(f"   ⚠️ trace error: {e}")
 
-        # ── Generate answer ────────────────────────────────────────
-        print("   Generating answer via LangChain...")
-        time.sleep(5)
+    if not trace_id:
+        trace_id = str(uuid.uuid4())
 
+    time.sleep(5)
+    cfg = {}
+    if client:
         try:
             from langfuse.langchain import CallbackHandler
-            cb  = CallbackHandler()
-            cfg = {"callbacks": [cb], "run_name": "RAG Answer Generation"}
+            cfg = {"callbacks": [CallbackHandler()], "run_name": "RAG Answer Generation"}
         except Exception:
-            cfg = {}
+            pass
 
-        p   = PromptTemplate.from_template(
-            "Answer in one sentence from context only.\nContext: {ctx}\nQuestion: {q}\nAnswer:"
-        )
-        ans = (p | llm | StrOutputParser()).invoke({"ctx": ctx, "q": q}, config=cfg)
-        print(f"   ✅ Answer: {ans[:60]}...")
+    p   = PromptTemplate.from_template("Answer in one sentence from context only.\nContext: {ctx}\nQuestion: {q}\nAnswer:")
+    ans = (p | llm | StrOutputParser()).invoke({"ctx": ctx, "q": q}, config=cfg)
+    print(f"   Answer: {ans[:60]}...")
 
-        if trace:
-            try:
-                trace.generation(
-                    name   = "rag_answer_generation",
-                    model  = "llama-3.3-70b-versatile",
-                    input  = {"question": q, "context": ctx},
-                    output = ans,
-                )
-            except Exception:
-                pass
+    scores = {}
+    metrics = [
+        ("ragas_faithfulness",
+         "Reply ONLY a decimal 0.0-1.0: Is the answer supported by the context?\nContext: {ctx}\nAnswer: {ans}\nScore:",
+         {"ctx": ctx, "ans": ans}),
+        ("ragas_answer_relevancy",
+         "Reply ONLY a decimal 0.0-1.0: Does the answer address the question?\nQuestion: {q}\nAnswer: {ans}\nScore:",
+         {"q": q, "ans": ans}),
+        ("ragas_context_recall",
+         "Reply ONLY a decimal 0.0-1.0: Does context cover the ground truth?\nContext: {ctx}\nGround Truth: {gt}\nScore:",
+         {"ctx": ctx, "gt": gt}),
+        ("ragas_context_precision",
+         "Reply ONLY a decimal 0.0-1.0: Is context relevant to the question?\nContext: {ctx}\nQuestion: {q}\nScore:",
+         {"ctx": ctx, "q": q}),
+    ]
 
-        # ── Score each metric ──────────────────────────────────────
-        scores = {}
-        metric_configs = [
-            ("faithfulness",
-             "Reply ONLY with a decimal 0.0 to 1.0.\nIs this answer fully supported by the context?\nContext: {ctx}\nAnswer: {ans}\nDecimal score:",
-             {"ctx": ctx, "ans": ans}),
+    for name, prompt_text, inputs in metrics:
+        time.sleep(8)
+        s = score_metric(prompt_text, inputs)
+        scores[name] = s
+        print(f"   {name}: {s:.4f}")
+        if send_score(trace_id, name, s, comment=f"Q{idx+1}: {q[:40]}"):
+            print(f"   -> sent to Langfuse Scores")
 
-            ("answer_relevancy",
-             "Reply ONLY with a decimal 0.0 to 1.0.\nDoes this answer address the question?\nQuestion: {q}\nAnswer: {ans}\nDecimal score:",
-             {"q": q, "ans": ans}),
+    avg = round(sum(scores.values()) / len(scores), 4)
+    scores["ragas_overall"] = avg
+    send_score(trace_id, "ragas_overall", avg, "Overall RAGAS score")
 
-            ("context_recall",
-             "Reply ONLY with a decimal 0.0 to 1.0.\nDoes the context contain enough info to match the ground truth?\nContext: {ctx}\nGround Truth: {gt}\nDecimal score:",
-             {"ctx": ctx, "gt": gt}),
+    halluc = round(1.0 - scores["ragas_faithfulness"], 4)
+    scores["ragas_hallucination"] = halluc
+    send_score(trace_id, "ragas_hallucination", halluc, "1 - faithfulness")
 
-            ("context_precision",
-             "Reply ONLY with a decimal 0.0 to 1.0.\nIs the context relevant and precise for this question?\nContext: {ctx}\nQuestion: {q}\nDecimal score:",
-             {"ctx": ctx, "q": q}),
-        ]
-
-        for mname, mprompt, minputs in metric_configs:
-            time.sleep(8)
-            s = score_metric(llm, mprompt, minputs)
-            scores[mname] = s
-            print(f"   ✅ {mname}: {s:.4f}")
-
-            # ── v3 correct API: create_score() ─────────────────────
-            if lf and trace_id:
-                ok = create_score_in_dashboard(
-                    lf, trace_id, mname, s,
-                    comment=f"RAGAS eval Q{idx+1}: {q[:40]}"
-                )
-                if ok:
-                    print(f"   📊 → Langfuse Scores dashboard!")
-
-        # Overall
-        avg = sum(scores.values()) / len(scores)
-        scores["overall"] = avg
-        if lf and trace_id:
-            create_score_in_dashboard(
-                lf, trace_id, "overall_rag_score", avg,
-                comment="Overall RAGAS score"
-            )
-            print(f"   📊 overall_rag_score: {avg:.4f} → Langfuse!")
-
-        # Update trace output
-        if trace:
-            try:
-                trace.update(output={**scores, "answer": ans})
-            except Exception:
-                pass
-
-        all_results.append(scores)
-        all_trace_ids.append(trace_id)
-
-        if idx < len(TEST_DATA) - 1:
-            print("   ⏳ Waiting 20s...")
-            time.sleep(20)
-
-    # ── Final scores ────────────────────────────────────────────────
-    keys = ["faithfulness", "answer_relevancy", "context_recall", "context_precision"]
-    print("\n" + "=" * 60)
-    print("📊 FINAL RAGAS SCORES")
-    print("=" * 60)
-    total = 0.0
-    final_scores = {}
-    for k in keys:
-        avg = sum(r.get(k, 0) for r in all_results) / len(all_results)
-        bar = "█" * int(avg * 20)
-        print(f"  {k:<22}: {avg:.4f}  |{bar:<20}|")
-        total += avg
-        final_scores[k] = avg
-    overall = total / len(keys)
-    print(f"\n  🎯 Overall: {overall:.4f} / 1.0")
-    verdict = ("✅ EXCELLENT!" if overall>=0.8 else "⚠️ GOOD" if overall>=0.6 else "❌ Needs work")
-    print(f"  {verdict}")
-    print("=" * 60)
-
-    # ── Summary trace + scores ──────────────────────────────────────
-    if lf:
+    if span_cm:
         try:
-            summary = lf.trace(
-                name   = "DualBrain — RAGAS Summary",
-                input  = {"questions": len(TEST_DATA)},
-                output = {**final_scores, "overall": overall},
-                tags   = ["summary", "ragas", "dualbrain"],
-            )
-            # Log all averages to Scores dashboard
-            for k, v in final_scores.items():
-                create_score_in_dashboard(
-                    lf, summary.id, f"avg_{k}", v, "Final average RAGAS score"
-                )
-            create_score_in_dashboard(
-                lf, summary.id, "avg_overall", overall, "Final overall score"
-            )
+            span.update(output={**scores, "answer": ans})
+            span_cm.__exit__(None, None, None)
+        except Exception:
+            pass
 
-            lf.flush()
-            host = os.getenv("LANGFUSE_HOST","https://us.cloud.langfuse.com")
-            print(f"\n📡 All scores flushed!")
-            print(f"   → Go to: {host}")
-            print(f"   → Click 'Scores' in left sidebar → all scores visible!")
-        except Exception as e:
-            print(f"⚠️ Summary error: {e}")
+    all_results.append(scores)
+    if idx < len(TEST_DATA) - 1:
+        print("   waiting 20s...")
+        time.sleep(20)
 
-    print("\n✅ Done!")
+keys = ["ragas_faithfulness", "ragas_answer_relevancy", "ragas_context_recall", "ragas_context_precision"]
+print("\n" + "="*60)
+print("FINAL RAGAS SCORES")
+print("="*60)
+total = 0.0
+for k in keys:
+    avg = round(sum(r.get(k, 0) for r in all_results) / len(all_results), 4)
+    print(f"  {k:<28}: {avg:.4f}")
+    total += avg
+overall = round(total / len(keys), 4)
+print(f"\n  Overall: {overall:.4f}")
+print("  EXCELLENT!" if overall >= 0.8 else "  GOOD" if overall >= 0.6 else "  Needs work")
 
-
-if __name__ == "__main__":
-    run()
+if client:
+    client.flush()
+    print(f"\nDone! Open {URL} -> Scores (left sidebar)")

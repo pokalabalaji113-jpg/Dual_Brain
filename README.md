@@ -1,264 +1,155 @@
-<div align="center">
+# 🧠 DualBrain AI — Adaptive Career Intelligence Platform
 
-# 🧠 DualBrain AI
-### *The World's First Dual-Mode AI Career Intelligence Platform*
-
-[![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.35-FF4B4B?style=for-the-badge&logo=streamlit)](https://streamlit.io)
-[![LangChain](https://img.shields.io/badge/LangChain-0.2-green?style=for-the-badge)](https://langchain.com)
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.1-orange?style=for-the-badge)](https://langchain-ai.github.io/langgraph)
-[![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3_70B-purple?style=for-the-badge)](https://groq.com)
-[![MCP](https://img.shields.io/badge/MCP-8_Tools-red?style=for-the-badge)](https://modelcontextprotocol.io)
-[![FAISS](https://img.shields.io/badge/FAISS-RAG-yellow?style=for-the-badge)](https://faiss.ai)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-
-<br/>
-
-> **DualBrain AI** is an adaptive career intelligence platform that switches its AI reasoning model based on user role — **Job Seeker Brain** for those entering the market, **Employee Brain** for those growing inside a company. Powered by LangGraph multi-node agents, LangChain RAG pipelines, FAISS vector search, and MCP tool protocol.
-
-<br/>
-
-![DualBrain AI Demo](https://img.shields.io/badge/Status-Production_Ready-brightgreen?style=for-the-badge)
-
-</div>
+> Two specialized AI brains, one platform: **Job Seeker Brain** and **Employee Brain**, each running its own LangGraph pipeline, sharing a Hybrid RAG engine, an MCP tool server, and full Langfuse + RAGAS observability.
 
 ---
 
-## 🎯 What Makes This Different
+## 🚀 What This Project Demonstrates
 
-| Feature | DualBrain AI | Regular Chatbot |
-|---|---|---|
-| **Adaptive Brain** | Switches reasoning per role | Single mode only |
-| **Video RAG** | Answers FROM video transcript (FAISS) | No video understanding |
-| **URL Chatbot** | Paste any YouTube URL → instant Q&A | Not possible |
-| **LangGraph Agents** | Multi-node pipeline per brain | Single LLM call |
-| **MCP Protocol** | 8 exposed tools for external clients | No tool protocol |
-| **Skill Verification** | AI quiz to detect fake skills | No verification |
-| **Burnout AI** | Detects stress patterns + recovery | No wellness |
+This isn't a single-prompt chatbot. It's a full GenAI engineering stack covering **8 distinct concepts** that interviewers look for:
+
+| # | Concept | Where it's used |
+|---|---------|------------------|
+| 1 | Multi-agent orchestration | LangGraph sequential pipelines (seeker_graph.py, employee_graph.py) |
+| 2 | Retrieval-Augmented Generation | Video transcript Q&A, URL chatbot |
+| 3 | Hybrid Retrieval | FAISS (dense) + BM25 (sparse) via EnsembleRetriever |
+| 4 | Tool Protocol (MCP) | 8 exposed tools for external AI clients |
+| 5 | LLM Observability | Langfuse tracing on every LLM call |
+| 6 | Automated Evaluation | RAGAS metrics → Langfuse Scores dashboard |
+| 7 | Document Processing | PyMuPDF/python-docx resume parsing |
+| 8 | Production Deployment | Docker + Streamlit Cloud |
 
 ---
 
-## 🧠 Architecture — Dual Brain System
+## 🏗️ Full Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      DualBrain AI                           │
-│                   Brain Switcher (app.py)                   │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-          ┌────────────┴────────────┐
-          │                         │
-┌─────────▼──────────┐   ┌──────────▼──────────┐
-│  🎯 JOB SEEKER     │   │  💼 EMPLOYEE BRAIN  │
-│      BRAIN         │   │                     │
-│                    │   │  LangGraph Pipeline:│
-│  LangGraph:        │   │  analyze_profile    │
-│  extract_skills    │   │  → detect_gaps      │
-│  → search_jobs     │   │  → gen_roadmap      │
-│  → learning_path   │   │  → burnout_check    │
-│  → suggest_videos  │   │  → career_advice    │
-│  → final_report    │   │                     │
-└────────────────────┘   └─────────────────────┘
-          │                         │
-          └────────────┬────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
-│                    SHARED SERVICES                          │
-│  LangChain + Groq LLaMA 3.3 70B  │  FAISS Vector Store     │
-│  YouTube Data API                 │  RAG Engine             │
-│  YouTube Transcript API           │  MCP Server (8 tools)   │
-│  SerpAPI Job Search               │  Resume Parser          │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│              Streamlit UI — app.py (Brain Switcher)       │
+└───────────────┬─────────────────────┬────────────────────┘
+                 │                     │
+        ┌────────▼────────┐   ┌───────▼─────────┐
+        │  SEEKER GRAPH    │   │  EMPLOYEE GRAPH  │
+        │  (LangGraph,     │   │  (LangGraph,     │
+        │   5 nodes)       │   │   5 nodes)       │
+        └────────┬────────┘   └───────┬─────────┘
+                 │                     │
+        ┌────────▼─────────────────────▼────────┐
+        │       Shared Services Layer (utils/)   │
+        │  llm_client │ rag_engine │ youtube_utils │
+        │  resume_parser │ job_search              │
+        └────────┬────────────────────┬──────────┘
+                 │                    │
+        ┌────────▼──────┐    ┌────────▼────────┐
+        │ Hybrid RAG     │    │ MCP Server       │
+        │ FAISS + BM25   │    │ (8 tools)        │
+        └────────────────┘    └─────────────────┘
+                 │
+        ┌────────▼──────────┐
+        │ Langfuse + RAGAS   │
+        │ (tracing + scoring)│
+        └────────────────────┘
 ```
 
 ---
 
-## 🚀 Features
+## 🤖 Agent Workflow — Sequential Multi-Agent Graphs (LangGraph)
 
-### 🎯 Job Seeker Brain — 7 Modules
+Both brains use a **deterministic sequential StateGraph** (not a ReAct/supervisor agent — chosen deliberately because each step depends on the previous step's output, so a routing LLM call would be wasted cost).
 
-<details>
-<summary><b>📄 Resume Analysis</b> — Click to expand</summary>
+### Job Seeker Graph (`seeker_graph.py`)
+```
+extract_skills → search_jobs → generate_learning_path → suggest_videos → generate_report
+```
 
-- Upload PDF, DOCX, or TXT resume
-- **LangGraph 5-node pipeline** extracts skills automatically
-- ATS compatibility score (0-100) with specific feedback
-- Missing skills detection based on target job role
-- Resume improvement suggestions (5 specific tips)
-- Strength and weakness analysis
-- Recommended job roles with LinkedIn + Naukri links
-- One-click navigation to learn missing skills via YouTube
+### Employee Graph (`employee_graph.py`)
+```
+analyze_profile → detect_skill_gaps → generate_roadmap → check_burnout → career_advice
+```
 
-</details>
-
-<details>
-<summary><b>📺 Skill Videos</b> — Click to expand</summary>
-
-- Search any skill — **50+ skills** with matched videos
-- Videos embedded directly in app — **no YouTube redirect**
-- Auto-loads transcript when video plays
-- Smart fallback: known library → YouTube search embed
-- Works for ANY skill even if not in library
-- Skill chips from resume for one-click search
-
-</details>
-
-<details>
-<summary><b>💬 Video Chatbot</b> — Click to expand</summary>
-
-- **LangChain RAG + FAISS** — answers grounded in video transcript
-- Semantic similarity search across transcript chunks
-- 6 quick-prompt buttons for instant questions
-- Falls back to general knowledge if no transcript
-- No duplicate messages — single input source
-- Full chat history with clear option
-
-</details>
-
-<details>
-<summary><b>🔗 URL Chatbot</b> — Click to expand</summary>
-
-- Paste **ANY YouTube URL** from browser
-- Transcript extracted automatically
-- RAG chatbot answers doubts from video content
-- 8 quick-prompt buttons
-- Works even for videos without transcripts (general knowledge mode)
-- Available in BOTH brains
-
-</details>
-
-<details>
-<summary><b>🗺 Learning Path</b> — Click to expand</summary>
-
-- AI generates phase-by-phase roadmap for any skill
-- 3-4 phases with 3-5 topics each
-- YouTube videos embedded per topic
-- Unique button keys — no duplicate key errors
-- Career outcomes with job links
-- Practice project suggestions
-
-</details>
-
-<details>
-<summary><b>🔗 Job Links</b> — Click to expand</summary>
-
-- LinkedIn + Naukri job links based on resume skills
-- Fresher / Mid / Senior / Remote / Freelance categories
-- AI-generated cover letter per job
-- One-click apply buttons
-- Real-time links based on target role
-
-</details>
-
-### 💼 Employee Brain — 6 Modules
-
-<details>
-<summary><b>🤖 Learning Companion</b> — Click to expand</summary>
-
-- **LangGraph 5-node agent pipeline** runs end-to-end
-- Profile → Skill Gaps → 3-Month Roadmap → Burnout Check → Career Advice
-- YouTube video links per skill gap
-- Persistent companion chat with profile context
-- Links to Coursera courses per skill gap
-
-</details>
-
-<details>
-<summary><b>🔀 Career Transition Engine</b> — Click to expand</summary>
-
-- "I want to move from Backend to GenAI" → Full plan
-- Feasibility score with explanation
-- Skill overlap analysis
-- Phase-by-phase transition roadmap
-- Interview prep: key topics, practice questions, portfolio projects
-- Salary change estimate
-- YouTube videos per phase
-
-</details>
-
-<details>
-<summary><b>🔥 Burnout Intelligence</b> — Click to expand</summary>
-
-- 9-dimension assessment (hours, sleep, stress, motivation...)
-- Burnout score 0-100 with risk level
-- Detected mental and physical signals
-- Immediate action plan (do today)
-- Weekly recovery schedule
-- Manager conversation script generator
-- Learning pause recommendation
-
-</details>
-
-<details>
-<summary><b>📈 Performance Analyzer</b> — Click to expand</summary>
-
-- Quarterly performance analysis
-- Promotion readiness score (0-100%)
-- Skill utilization: well-used / underutilized / should-learn
-- Resume improvement suggestions for promotion
-- Timeline-based action plan (this week / month / quarter)
-- Peer comparison insight
-
-</details>
-
-<details>
-<summary><b>🧪 Skill Assessment Quiz</b> — Click to expand</summary>
-
-- 10 AI-generated MCQ questions per domain
-- Easy/Medium/Hard difficulty mix
-- Detects if claimed skills are genuine
-- Answer review with explanations
-- YouTube videos for weak areas (embedded)
-- Interview readiness rating
-- Personalized 2-week study plan
-
-</details>
-
-<details>
-<summary><b>👥 Team Intelligence</b> — Click to expand</summary>
-
-- Team health score (0-100)
-- Communication pattern analysis
-- Bottleneck detection
-- Quick wins recommendations
-- Team rituals to add (with duration)
-- Tools to try for better collaboration
-
-</details>
+Each node:
+1. Reads a shared `state` dict
+2. Calls `call_llm()` with a "return ONLY JSON" system prompt
+3. Updates `state` with structured output
+4. Passes to the next node via `add_edge()`
 
 ---
 
-## 🔌 MCP Server — 8 Tools
-
-DualBrain AI exposes a full **Model Context Protocol** server that any MCP client can connect to:
+## 🔀 Hybrid RAG Pipeline (the part most people skip)
 
 ```python
-Tools available:
-├── analyze_resume          # Full resume analysis → JSON
-├── generate_learning_path  # Phase-by-phase roadmap
-├── search_jobs             # LinkedIn + Naukri job links
-├── career_transition       # Full transition plan
-├── burnout_analysis        # Stress detection + recovery
-├── youtube_url_chat        # Answer from any YouTube URL
-├── skill_assessment        # MCQ quiz generation
-└── search_youtube_videos   # Find videos for any skill
+EnsembleRetriever(
+    retrievers=[faiss_retriever, bm25_retriever],
+    weights=[0.6, 0.4]   # 60% semantic, 40% keyword
+)
 ```
 
-### Connect to Claude Desktop:
-```json
-{
-  "mcpServers": {
-    "dualbrain-ai": {
-      "command": "python",
-      "args": ["mcp/mcp_server.py"],
-      "cwd": "/path/to/dual_brain_ai",
-      "env": {
-        "GROQ_API_KEY": "your_key_here"
-      }
-    }
-  }
-}
-```
+| Retriever | Type | Catches |
+|-----------|------|---------|
+| FAISS (Sentence-Transformers `all-MiniLM-L6-v2`) | Dense/semantic | Paraphrased questions, conceptual similarity |
+| BM25 | Sparse/keyword | Exact terms, acronyms, names that embeddings miss |
+
+**Why this matters in interviews:** pure dense retrieval fails on exact keyword matches (e.g., error codes, proper nouns); pure sparse retrieval fails on paraphrasing. Hybrid covers both failure modes.
+
+---
+
+## 🔌 MCP Server — 8 Tools Exposed
+
+| Tool | Purpose |
+|------|---------|
+| `analyze_resume` | Full resume → skills/gaps/ATS score (JSON) |
+| `generate_learning_path` | Phase-based roadmap for any skill |
+| `search_jobs` | Job listing links/results |
+| `career_transition` | Role A → Role B feasibility + roadmap |
+| `burnout_analysis` | 9-dim burnout scoring + recovery plan |
+| `skill_assessment` | 10 AI-generated MCQs per domain |
+| `youtube_url_chat` | Transcript-grounded Q&A on any YouTube URL |
+| `search_youtube_videos` | Skill → curated/searched video results |
+
+This means DualBrain AI isn't just a Streamlit app — it's also a **callable AI service** any MCP client (e.g. Claude Desktop) can plug into.
+
+---
+
+## 📊 Observability — Langfuse + RAGAS
+
+Every LLM call is wrapped with `langfuse.langchain.CallbackHandler`, producing a trace per generation. On top of that, `evaluate_rag.py` runs **RAGAS-style scoring** on RAG answers and pushes results back into the same trace using `client.create_score(trace_id=..., name=..., value=...)`.
+
+| Metric | Measures |
+|--------|----------|
+| `ragas_faithfulness` | Is the answer grounded in retrieved context? |
+| `ragas_answer_relevancy` | Does it actually answer the question? |
+| `ragas_context_recall` | Did retrieval surface the needed info? |
+| `ragas_context_precision` | Is the retrieved context free of noise? |
+| `ragas_hallucination` | Derived: `1 - faithfulness` |
+| `ragas_overall` | Average of the four core metrics |
+
+**Key gotcha (v3/v4 SDK):**
+- ❌ `langfuse.trace(...)` — removed in SDK v3+
+- ✅ `langfuse.start_as_current_observation(as_type="span", ...)` + `get_current_trace_id()`
+- ❌ `trace.score(...)` — silently no-ops
+- ✅ `client.create_score(trace_id=..., name=..., value=..., data_type="NUMERIC")`
+- Env var is `LANGFUSE_BASE_URL` (or `LANGFUSE_HOST` for older SDKs) — must point to `us.cloud.langfuse.com` if your project is on the US region
+
+---
+
+## 🧰 Full Tech Stack
+
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| LLM | Groq — LLaMA 3.3 70B Versatile | Free, extremely fast inference |
+| Orchestration | LangChain | Standard chains, prompt templates, output parsers |
+| Multi-agent | LangGraph | Stateful sequential pipelines |
+| Vector store | FAISS | Dense semantic search |
+| Sparse retrieval | BM25 (`rank_bm25`) | Keyword/exact-match search |
+| Embeddings | Sentence-Transformers (`all-MiniLM-L6-v2`) | Local, free, no API cost |
+| Document parsing | PyMuPDF, python-docx | Resume text extraction |
+| Video | youtube-transcript-api, YouTube Data API | Transcript fetch + search |
+| Tool protocol | MCP (Model Context Protocol) | External AI client integration |
+| Observability | Langfuse v3/v4 | Tracing every LLM call |
+| Evaluation | RAGAS-style custom scorer | Faithfulness/relevancy/recall/precision |
+| UI | Streamlit | Rapid multi-page app |
+| Container | Docker | Reproducible deployment |
+| Hosting | Streamlit Community Cloud | Free public demo |
 
 ---
 
@@ -266,135 +157,96 @@ Tools available:
 
 ```
 dual_brain_ai/
-│
-├── app.py                          # Brain switcher + routing
-├── requirements.txt                # All dependencies
-├── .gitignore                      # Git ignore rules
-├── README.md                       # This file
-│
-├── .streamlit/
-│   ├── config.toml                 # Clean minimal theme
-│   └── secrets.toml                # API keys (git ignored)
-│
-├── pages/                          # 12 feature pages
-│   ├── __init__.py
-│   ├── resume_analysis.py          # ATS + skills + jobs + improvements
-│   ├── skill_videos.py             # YouTube embedded player
-│   ├── video_chatbot.py            # RAG chatbot (FAISS)
-│   ├── url_chatbot.py              # ANY YouTube URL chatbot ← NEW
-│   ├── learning_path.py            # Phase-by-phase roadmap
-│   ├── job_links.py                # LinkedIn + Naukri + cover letter
-│   ├── learning_companion.py       # LangGraph employee pipeline
-│   ├── career_transition.py        # Role transition engine
-│   ├── burnout_intelligence.py     # Stress detection
-│   ├── performance_analyzer.py     # Promotion readiness
-│   ├── skill_assessment.py         # MCQ quiz
-│   └── team_intelligence.py        # Collaboration patterns
-│
-├── graph/                          # LangGraph agents
-│   ├── __init__.py
-│   ├── seeker_graph.py             # 5-node job seeker pipeline
-│   └── employee_graph.py           # 5-node employee pipeline
-│
-├── mcp/                            # MCP Protocol server
-│   ├── __init__.py
-│   ├── mcp_server.py               # 8 MCP tools
-│   └── claude_desktop_config.json  # Claude Desktop config
-│
-└── utils/                          # Shared services
-    ├── __init__.py
-    ├── llm_client.py               # LangChain + Groq
-    ├── claude_client.py            # Compatibility shim
-    ├── rag_engine.py               # FAISS vector store
-    ├── resume_parser.py            # PyMuPDF + python-docx
-    ├── youtube_utils.py            # YouTube API + transcript
-    └── job_search.py               # SerpAPI + fallback
+├── app.py                     # Brain switcher / router
+├── graph/
+│   ├── seeker_graph.py         # 5-node Job Seeker LangGraph
+│   └── employee_graph.py       # 5-node Employee LangGraph
+├── pages/                       # Streamlit pages per feature
+│   ├── resume_analysis.py
+│   ├── skill_videos.py
+│   ├── video_chatbot.py
+│   ├── url_chatbot.py
+│   ├── learning_path.py
+│   ├── job_links.py
+│   ├── learning_companion.py
+│   ├── career_transition.py
+│   ├── burnout_intelligence.py
+│   ├── performance_analyzer.py
+│   ├── skill_assessment.py
+│   └── team_intelligence.py
+├── utils/
+│   ├── llm_client.py            # Groq + Langfuse callback wiring
+│   ├── rag_engine.py             # Hybrid FAISS+BM25 retriever
+│   ├── resume_parser.py
+│   ├── youtube_utils.py
+│   ├── job_search.py
+│   └── claude_client.py
+├── mcp/
+│   ├── mcp_server.py             # 8-tool MCP server
+│   └── claude_desktop_config.json
+├── evaluate_rag.py                # RAGAS + Langfuse scoring script
+├── Dockerfile
+├── .dockerignore
+├── requirements.txt
+└── .streamlit/secrets.toml        # API keys (gitignored)
 ```
 
 ---
 
-## ⚡ Quick Start
+## ⚙️ Setup
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/yourusername/dual_brain_ai.git
-cd dual_brain_ai
-```
-
-### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configure API keys
-Create `.streamlit/secrets.toml`:
+`.streamlit/secrets.toml`:
 ```toml
-GROQ_API_KEY     = "gsk_..."        # Required — free at console.groq.com
-YOUTUBE_API_KEY  = "AIza..."        # Optional — Google Cloud Console
-SERPAPI_KEY      = "..."            # Optional — serpapi.com
+GROQ_API_KEY        = "gsk_..."
+LANGFUSE_PUBLIC_KEY = "pk-lf-..."
+LANGFUSE_SECRET_KEY = "sk-lf-..."
+LANGFUSE_BASE_URL   = "https://us.cloud.langfuse.com"
+YOUTUBE_API_KEY     = "..."   # optional
+SERPAPI_KEY         = "..."   # optional
 ```
 
-### 4. Run
+Run locally:
 ```bash
 streamlit run app.py
 ```
 
-Open [http://localhost:8501](http://localhost:8501)
+Run evaluation:
+```bash
+python evaluate_rag.py
+```
+
+Run with Docker:
+```bash
+docker build -t dualbrain-ai .
+docker run -p 8501:8501 --env-file .env dualbrain-ai
+```
 
 ---
 
-## 🔑 API Keys
+## 🧩 Design Decisions (talk about these in interviews)
 
-| Key | Required | Free? | Get it from |
-|---|---|---|---|
-| `GROQ_API_KEY` | ✅ Yes | ✅ Free | [console.groq.com](https://console.groq.com) |
-| `YOUTUBE_API_KEY` | Optional | ✅ Free (10k/day) | [Google Cloud Console](https://console.cloud.google.com) |
-| `SERPAPI_KEY` | Optional | ✅ Free (100/mo) | [serpapi.com](https://serpapi.com) |
-
-> Without YouTube API key → 50+ built-in videos + YouTube search fallback
-> Without SerpAPI key → LinkedIn + Naukri direct links
+1. **Sequential graph over ReAct agent** — deterministic dependencies between steps mean a router LLM call adds cost without adding value.
+2. **Hybrid retrieval over pure FAISS** — covers both semantic paraphrasing and exact keyword matches.
+3. **Reference-free RAGAS metrics** — `Faithfulness`, `ResponseRelevancy`, `LLMContextPrecisionWithoutReference` don't need ground-truth answers, so evaluation runs on *every* production query, not just a curated test set.
+4. **Hallucination as a derived metric** — `1 - faithfulness`, free extra signal with zero added LLM calls.
+5. **MCP exposure** — turns the app from "a UI" into "a service other agents can call."
 
 ---
 
-## 🛠 Tech Stack
+## 🐛 Issues Solved During Build (good interview talking points)
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | Streamlit |
-| **LLM** | Groq — LLaMA 3.3 70B |
-| **LLM Framework** | LangChain + LangChain-Groq |
-| **Agent Orchestration** | LangGraph (multi-node pipelines) |
-| **Vector Store** | FAISS (Facebook AI) |
-| **Embeddings** | Sentence Transformers (all-MiniLM-L6-v2) |
-| **RAG** | LangChain RAG + FAISS retriever |
-| **Tool Protocol** | MCP (Model Context Protocol) |
-| **Resume Parsing** | PyMuPDF + python-docx |
-| **YouTube** | YouTube Data API v3 + youtube-transcript-api |
-| **Job Search** | SerpAPI (Google Jobs) |
-| **Language** | Python 3.12 |
+- Groq model deprecation mid-project → migrated to `llama-3.3-70b-versatile`
+- 429 rate limits during RAGAS eval → added delays + reduced `max_tokens`
+- Langfuse SDK breaking changes (`trace()` removed, `score()` → `create_score()`, `LANGFUSE_HOST` → `LANGFUSE_BASE_URL`)
+- Streamlit `DuplicateElementKey` on repeated video IDs → composite keys (`skill_idx + vid_idx`)
+- Leaked API keys in git history → key rotation + history reset
+- Sidebar collapse issue on Streamlit Cloud → CSS fix for `collapsedControl`
 
 ---
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your branch: `git checkout -b feature/amazing-feature`
-3. Commit: `git commit -m 'Add amazing feature'`
-4. Push: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-
-**Built with ❤️ using LangChain · LangGraph · Groq · FAISS · MCP · Streamlit**
-
-⭐ Star this repo if it helped you!
-
-</div>
+## 📜 License
+MIT
